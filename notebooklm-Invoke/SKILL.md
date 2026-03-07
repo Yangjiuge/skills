@@ -30,6 +30,7 @@ python3 {baseDir}/scripts/notebooklm.py ask "Summarize the key takeaways" --note
   - `research wait`
 
 ## References
+- `README.md` (installation, requirements, troubleshooting)
 - `references/cli-commands.md`
 
 ## Assets
