@@ -143,7 +143,7 @@ class SynologyConfig:
     verify_ssl: bool = True
     timeout: int = 30
     session: str = "FileStation"
-    readonly: bool = True
+    readonly: bool = False
     mutation_allow_paths: tuple[str, ...] = ()
 
 
@@ -257,9 +257,8 @@ def ensure_mutation_allowed(
     ensure_write_enabled(config, command)
 
     if not config.mutation_allow_paths:
-        raise SynologyError(
-            f"Command {command!r} is blocked: missing SYNOLOGY_MUTATION_ALLOW_PATHS"
-        )
+        # Backward-compatible behavior: no allowlist means unrestricted mutation paths.
+        return
 
     blocked: list[str] = []
     for path in target_paths:
@@ -321,7 +320,7 @@ def load_config_from_env(env: Mapping[str, str] | None = None) -> SynologyConfig
     verify_ssl_raw = source.get("SYNOLOGY_VERIFY_SSL", "true")
     timeout_raw = source.get("SYNOLOGY_TIMEOUT", "30")
     session_name = (source.get("SYNOLOGY_SESSION") or "FileStation").strip() or "FileStation"
-    readonly_raw = source.get("SYNOLOGY_READONLY", "true")
+    readonly_raw = source.get("SYNOLOGY_READONLY", "false")
     allow_paths_raw = source.get("SYNOLOGY_MUTATION_ALLOW_PATHS", "")
 
     try:

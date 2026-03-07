@@ -7,11 +7,15 @@ python3 scripts/synology_file_station.py info
 ```
 
 ## Safety mode
-By default, mutation commands are blocked because `SYNOLOGY_READONLY=true`.
+By default, mutation commands are allowed because `SYNOLOGY_READONLY=false`.
 
-To enable controlled writes, set:
+To enforce read-only mode, set:
 ```bash
-export SYNOLOGY_READONLY=false
+export SYNOLOGY_READONLY=true
+```
+
+To enable controlled writes, set an allowlist:
+```bash
 export SYNOLOGY_MUTATION_ALLOW_PATHS=/home/ai-work,/home/inbox
 ```
 Only targets under allowlist roots can be modified.
