@@ -1,8 +1,0 @@
-2026-03-11T17:07:27+0800 INFO gdelt-gkg-mentions-fetch http-get attempt=1/5 url=http://data.gdeltproject.org/gdeltv2/lastupdate.txt
-2026-03-11T17:07:27+0800 INFO gdelt-gkg-mentions-fetch http-ok status=200 bytes=319 url=http://data.gdeltproject.org/gdeltv2/lastupdate.txt
-2026-03-11T17:07:27+0800 INFO gdelt-gkg-mentions-fetch selected-latest dataset=gkg count=1
-2026-03-11T17:07:27+0800 INFO gdelt-gkg-mentions-fetch dataset=gkg output-dir=/home/fpddmw/projects/skills/gdelt-gkg-mentions-fetch/tmp-test/out/gkg
-2026-03-11T17:07:27+0800 INFO gdelt-gkg-mentions-fetch http-get attempt=1/5 url=http://data.gdeltproject.org/gdeltv2/20260311091500.gkg.csv.zip
-2026-03-11T17:07:29+0800 INFO gdelt-gkg-mentions-fetch http-ok status=200 bytes=3727655 url=http://data.gdeltproject.org/gdeltv2/20260311091500.gkg.csv.zip
-2026-03-11T17:07:29+0800 INFO gdelt-gkg-mentions-fetch structure-validation-ok dataset=gkg path=/home/fpddmw/projects/skills/gdelt-gkg-mentions-fetch/tmp-test/out/gkg/20260311091500.gkg.csv.zip scanned_lines=200 scan_complete=False
-2026-03-11T17:07:29+0800 INFO gdelt-gkg-mentions-fetch downloaded dataset=gkg path=/home/fpddmw/projects/skills/gdelt-gkg-mentions-fetch/tmp-test/out/gkg/20260311091500.gkg.csv.zip bytes=3727655 preview_lines=1
