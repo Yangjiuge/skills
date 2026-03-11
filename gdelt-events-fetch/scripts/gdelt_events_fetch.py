@@ -379,11 +379,11 @@ def parse_lastupdate_events(text: str, logger: logging.Logger) -> list[ExportFil
 
 
 def iter_masterfile_events(
-    text: str, start: datetime, end: datetime, logger: logging.Logger
+    lines: Iterable[str], start: datetime, end: datetime, logger: logging.Logger
 ) -> Iterable[ExportFileEntry]:
     scanned = 0
     matched = 0
-    for line in text.splitlines():
+    for line in lines:
         scanned += 1
         parsed = parse_filelist_line(line, logger)
         if not parsed:
@@ -408,6 +408,84 @@ def masterfilelist_url(config: RuntimeConfig) -> str:
     return f"{config.base_url}/{MASTERFILELIST_PATH}"
 
 
+def collect_masterfile_events(
+    *,
+    url: str,
+    start: datetime,
+    end: datetime,
+    client: RetryableHttpClient,
+    logger: logging.Logger,
+) -> list[ExportFileEntry]:
+    attempts = client._cfg.max_retries + 1
+
+    for attempt in range(1, attempts + 1):
+        client._throttle()
+        req = request.Request(url, method="GET")
+        req.add_header("User-Agent", client._cfg.user_agent)
+        req.add_header("Accept", "text/plain,*/*")
+        logger.info("http-get-stream attempt=%d/%d url=%s", attempt, attempts, url)
+
+        try:
+            with request.urlopen(req, timeout=client._cfg.timeout_seconds) as resp:
+                client._last_request_monotonic = time.monotonic()
+                logger.info(
+                    "http-ok-stream status=%s url=%s",
+                    getattr(resp, "status", "unknown"),
+                    url,
+                )
+                lines = (raw.decode("utf-8", errors="replace").rstrip("\n") for raw in resp)
+                candidates = sorted(
+                    iter_masterfile_events(lines=lines, start=start, end=end, logger=logger),
+                    key=lambda x: x.timestamp,
+                )
+                return candidates
+        except HTTPError as exc:
+            client._last_request_monotonic = time.monotonic()
+            status = int(exc.code)
+            body = exc.read().decode("utf-8", errors="replace").strip()
+            body_excerpt = body[:300]
+            retriable = status in RETRIABLE_HTTP_CODES
+            retry_after = client._parse_retry_after(exc.headers.get("Retry-After"))
+            if retriable and attempt < attempts:
+                delay = (
+                    retry_after
+                    if retry_after is not None
+                    else client._cfg.retry_backoff_seconds
+                    * (client._cfg.retry_backoff_multiplier ** (attempt - 1))
+                )
+                logger.warning(
+                    "http-stream-retry status=%d delay=%.2fs attempt=%d/%d url=%s body=%s",
+                    status,
+                    delay,
+                    attempt,
+                    attempts,
+                    url,
+                    body_excerpt,
+                )
+                time.sleep(delay)
+                continue
+            raise RuntimeError(f"HTTP {status} for {url}. body_excerpt={body_excerpt!r}") from exc
+        except (URLError, TimeoutError) as exc:
+            client._last_request_monotonic = time.monotonic()
+            if attempt < attempts:
+                delay = client._cfg.retry_backoff_seconds * (
+                    client._cfg.retry_backoff_multiplier ** (attempt - 1)
+                )
+                logger.warning(
+                    "network-stream-retry delay=%.2fs attempt=%d/%d url=%s err=%s",
+                    delay,
+                    attempt,
+                    attempts,
+                    url,
+                    exc,
+                )
+                time.sleep(delay)
+                continue
+            raise RuntimeError(f"Request failed for {url}: {exc}") from exc
+
+    raise RuntimeError(f"Failed to stream after retries: {url}")
+
+
 def preview_zip_lines(raw: bytes, limit: int) -> tuple[str | None, list[str]]:
     if limit <= 0:
         return None, []
@@ -426,7 +504,7 @@ def preview_zip_lines(raw: bytes, limit: int) -> tuple[str | None, list[str]]:
         return first_member, preview
 
 
-def validate_zip_event_payload(
+def validate_zip_payload(
     *,
     payload: bytes,
     expected_columns: int,
@@ -602,7 +680,7 @@ def download_entries(
 
         validation: dict[str, Any] | None = None
         if validate_structure:
-            validation = validate_zip_event_payload(
+            validation = validate_zip_payload(
                 payload=payload,
                 expected_columns=expected_columns,
                 max_lines=validation_max_lines,
@@ -752,10 +830,12 @@ def select_entries(args: argparse.Namespace, config: RuntimeConfig, logger: logg
     if end < start:
         raise ValueError("--end-datetime must be >= --start-datetime.")
 
-    text = client.get_text(masterfilelist_url(config))
-    candidates = sorted(
-        iter_masterfile_events(text=text, start=start, end=end, logger=logger),
-        key=lambda x: x.timestamp,
+    candidates = collect_masterfile_events(
+        url=masterfilelist_url(config),
+        start=start,
+        end=end,
+        client=client,
+        logger=logger,
     )
     selected = candidates[: args.max_files]
     logger.info(

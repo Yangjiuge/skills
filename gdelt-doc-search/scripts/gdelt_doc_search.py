@@ -37,6 +37,17 @@ TS_FORMAT_HELP = "YYYYMMDDHHMMSS"
 RETRIABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 DOC_API_MAX_RECORDS_LIMIT = 250
 DOC_API_TIMELINE_SMOOTH_LIMIT = 30
+RESERVED_DOC_PARAM_KEYS = {
+    "query",
+    "mode",
+    "format",
+    "timespan",
+    "startdatetime",
+    "enddatetime",
+    "maxrecords",
+    "sort",
+    "timelinesmooth",
+}
 
 
 @dataclass(frozen=True)
@@ -361,6 +372,11 @@ def validate_search_args(args: argparse.Namespace) -> None:
 
 
 def build_search_params(args: argparse.Namespace) -> dict[str, str]:
+    extra_params = parse_key_value_args(args.param, "--param")
+    for key in extra_params:
+        if key.strip().lower() in RESERVED_DOC_PARAM_KEYS:
+            raise ValueError(f"--param cannot override reserved key: {key!r}")
+
     params: dict[str, str] = {
         "query": args.query.strip(),
         "mode": args.mode.strip(),
@@ -378,7 +394,7 @@ def build_search_params(args: argparse.Namespace) -> dict[str, str]:
     if args.timeline_smooth is not None:
         params["TIMELINESMOOTH"] = str(args.timeline_smooth)
 
-    params.update(parse_key_value_args(args.param, "--param"))
+    params.update(extra_params)
     return params
 
 
