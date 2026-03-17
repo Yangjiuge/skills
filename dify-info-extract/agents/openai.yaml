@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dify Info Extract"
+  short_description: "Run a Dify workflow on local files"
+  default_prompt: "Use $dify-info-extract to run the workflow on local transcript and image files, optionally pass scene, and return the Dify response or data.outputs."
