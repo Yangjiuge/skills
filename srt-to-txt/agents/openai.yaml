@@ -1,0 +1,4 @@
+interface:
+  display_name: "SRT to TXT"
+  short_description: "Convert SRT to TXT while keeping cue time ranges"
+  default_prompt: "Use $srt-to-txt to convert one or more local .srt subtitle files into .txt files that keep cue time ranges, drop numeric indices, and remove duplicated inline timestamps after speaker labels."
